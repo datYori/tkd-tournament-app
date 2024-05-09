@@ -6,7 +6,15 @@ const socketIo = require('socket.io');
 const cors = require('cors');
 
 const app = express();
-app.use(cors()); // Enable CORS for all routes
+
+// CORS options
+const corsOptions = {
+  origin: '*', // Allow any domain
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type']
+};
+
+app.use(cors(corsOptions));
 
 const server = http.createServer(app);
 const io = socketIo(server, {
