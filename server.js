@@ -31,7 +31,9 @@ mongoose.connect('mongodb://localhost/tournament', { useNewUrlParser: true, useU
 const ParticipantSchema = new mongoose.Schema({
   name: String,
   weightCategory: String,
-  ageCategory: String
+  ageCategory: String,
+  kupCategory: String,
+  gender: String,
 });
 const Participant = mongoose.model('Participant', ParticipantSchema);
 
@@ -81,10 +83,10 @@ app.put('/api/matches/:id', async (req, res) => {
   res.send({ success: true });
 });
 
-app.get('/api/matches/:weight/:age', async (req, res) => {
-  const { weight, age } = req.params;
+app.get('/api/matches/:weightCategory/:age', async (req, res) => {
+  const { weightCategory, age } = req.params;
   try {
-    const matches = await Match.find({ weightCategory: weight, ageCategory: age });
+    const matches = await Match.find({ weightCategory: weightCategory, ageCategory: age });
     res.json(matches);
   } catch (error) {
     res.status(500).send({ message: 'Error fetching matches', error });
@@ -92,10 +94,10 @@ app.get('/api/matches/:weight/:age', async (req, res) => {
 });
 
 // New endpoint to generate and shuffle brackets
-app.post('/api/generate-bracket/:weight/:age', async (req, res) => {
-  const { weight, age } = req.params;
+app.post('/api/generate-bracket/:weightCategory/:age', async (req, res) => {
+  const { weightCategory, age } = req.params;
   try {
-    const participants = await Participant.find({ weightCategory: weight, ageCategory: age });
+    const participants = await Participant.find({ weightCategory: weightCategory, ageCategory: age });
     if (participants.length < 2) {
       return res.status(400).send({ message: 'Not enough participants to generate a bracket.' });
     }
@@ -109,7 +111,7 @@ app.post('/api/generate-bracket/:weight/:age', async (req, res) => {
       if (shuffledParticipants[i + 1]) { // Ensure there's a pair
         const newMatch = new Match({
           participants: [shuffledParticipants[i]._id, shuffledParticipants[i + 1]._id],
-          weightCategory: weight,
+          weightCategory: weightCategory,
           ageCategory: age
         });
         await newMatch.save();
