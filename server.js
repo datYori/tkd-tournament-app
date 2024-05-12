@@ -15,16 +15,15 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+app.use(bodyParser.json());
 
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: "http://localhost:3001", // Adjust this to match your frontend's URL if it's different
+    origin: "http://localhost:3001",
     methods: ["GET", "POST"]
   }
 });
-
-app.use(bodyParser.json());
 
 mongoose.connect('mongodb://localhost/tournament', { useNewUrlParser: true, useUnifiedTopology: true });
 
@@ -38,11 +37,28 @@ const ParticipantSchema = new mongoose.Schema({
 const Participant = mongoose.model('Participant', ParticipantSchema);
 
 const MatchSchema = new mongoose.Schema({
-  participants: [String],
-  winner: String,
+  id: Number,
+  participant: String,
+  opponent: String,
+  nextMatch: Number,
+  result: {
+    winner: String  // Store the winner's name.
+  },
+  round: Number
 });
-const Match = mongoose.model('Match', MatchSchema);
 
+const TournamentSchema = new mongoose.Schema({
+  weightCategory: String,
+  ageCategory: String,
+  gender: String,
+  kupCategory: String,
+  matches: [MatchSchema],
+  startDate: { type: Date, default: Date.now },
+  status: { type: String, default: 'Pending' }
+});
+const Tournament = mongoose.model('Tournament', TournamentSchema);
+
+// API to get all participants
 app.get('/api/participants', async (req, res) => {
   try {
     const participants = await Participant.find();
@@ -52,12 +68,14 @@ app.get('/api/participants', async (req, res) => {
   }
 });
 
+// API to add a new participant
 app.post('/api/participants', async (req, res) => {
   const participant = new Participant(req.body);
   await participant.save();
   res.status(201).send(participant);
 });
 
+// API to delete a participant
 app.delete('/api/participants/:id', async (req, res) => {
   try {
     const result = await Participant.findByIdAndDelete(req.params.id);
@@ -71,59 +89,64 @@ app.delete('/api/participants/:id', async (req, res) => {
   }
 });
 
-app.post('/api/matches', async (req, res) => {
-  const match = new Match(req.body);
-  await match.save();
-  res.status(201).send(match);
-});
-
-app.put('/api/matches/:id', async (req, res) => {
-  await Match.findByIdAndUpdate(req.params.id, { winner: req.body.winner });
-  io.emit('matchUpdated', { matchId: req.params.id, winner: req.body.winner });
-  res.send({ success: true });
-});
-
-app.get('/api/matches/:weightCategory/:age', async (req, res) => {
-  const { weightCategory, age } = req.params;
+// POST API to generate a tournament bracket
+app.post('/api/tournaments', async (req, res) => {
+  const { weightCategory, ageCategory, gender, kupCategory } = req.body;
   try {
-    const matches = await Match.find({ weightCategory: weightCategory, ageCategory: age });
-    res.json(matches);
-  } catch (error) {
-    res.status(500).send({ message: 'Error fetching matches', error });
-  }
-});
-
-// New endpoint to generate and shuffle brackets
-app.post('/api/generate-bracket/:weightCategory/:age', async (req, res) => {
-  const { weightCategory, age } = req.params;
-  try {
-    const participants = await Participant.find({ weightCategory: weightCategory, ageCategory: age });
+    const participants = await Participant.find({ weightCategory, ageCategory, gender, kupCategory }).lean();
     if (participants.length < 2) {
-      return res.status(400).send({ message: 'Not enough participants to generate a bracket.' });
+      return res.status(400).send({ message: 'Not enough participants for a tournament' });
     }
-
-    // Shuffle participants
-    const shuffledParticipants = participants.sort(() => 0.5 - Math.random());
-
-    // Pair participants for initial matches
-    const matches = [];
-    for (let i = 0; i < shuffledParticipants.length; i += 2) {
-      if (shuffledParticipants[i + 1]) { // Ensure there's a pair
-        const newMatch = new Match({
-          participants: [shuffledParticipants[i]._id, shuffledParticipants[i + 1]._id],
-          weightCategory: weightCategory,
-          ageCategory: age
-        });
-        await newMatch.save();
-        matches.push(newMatch);
-      }
-    }
-
-    res.status(201).send(matches);
+    const shuffledParticipants = shuffleParticipants(participants);
+    const tournamentTree = createTournamentTree(shuffledParticipants, weightCategory, ageCategory, gender, kupCategory);
+    const newTournament = new Tournament({ weightCategory, ageCategory, gender, kupCategory, matches: tournamentTree.matches });
+    await newTournament.save();
+    res.status(201).send(newTournament);
   } catch (error) {
-    res.status(500).send({ message: 'Error generating bracket', error });
+    res.status(500).send({ message: 'Error generating bracket', error: error });
   }
 });
+
+// GET API to retrieve tournament state
+app.get('/api/tournaments/:id', async (req, res) => {
+  try {
+    const tournament = await Tournament.findById(req.params.id);
+    if (!tournament) {
+      return res.status(404).send({ message: 'Tournament not found' });
+    }
+    res.status(200).send(tournament);
+  } catch (error) {
+    res.status(500).send({ message: 'Error fetching tournament', error: error });
+  }
+});
+
+function shuffleParticipants(participants) {
+  for (let i = participants.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [participants[i], participants[j]] = [participants[j], participants[i]];
+  }
+  return participants;
+}
+
+function createTournamentTree(participants, weightCategory, ageCategory, gender, kupCategory) {
+  let rounds = Math.ceil(Math.log2(participants.length));
+  let matches = [];
+  let matchId = 1; // Initialize match IDs to link participants
+
+  participants.forEach((participant, index) => {
+    if (index % 2 === 0 && index + 1 < participants.length) {
+      matches.push({
+        id: matchId++,
+        participant: participants[index].name,
+        opponent: participants[index + 1].name,
+        nextMatch: matchId / 2,  // Link to the next match
+        round: 1
+      });
+    }
+  });
+
+  return { matches };
+}
 
 server.listen(3000, () => {
   console.log('Server running on port 3000');
