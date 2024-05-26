@@ -21,7 +21,7 @@ const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
     origin: "http://localhost:3001",
-    methods: ["GET", "POST"]
+    methods: ["GET", "POST", "PUT"]
   }
 });
 
@@ -129,24 +129,55 @@ function shuffleParticipants(participants) {
 }
 
 function createTournamentTree(participants, weightCategory, ageCategory, gender, kupCategory) {
-  let rounds = Math.ceil(Math.log2(participants.length));
-  let matches = [];
-  let matchId = 1; // Initialize match IDs to link participants
+  const rounds = Math.ceil(Math.log2(participants.length));
+  const matches = [];
+  let matchId = 1;
+  let currentRound = 1;
 
-  participants.forEach((participant, index) => {
-    if (index % 2 === 0 && index + 1 < participants.length) {
-      matches.push({
-        id: matchId++,
-        participant: participants[index].name,
-        opponent: participants[index + 1].name,
-        nextMatch: matchId / 2,  // Link to the next match
-        round: 1
-      });
+  while (participants.length > 1) {
+    const roundMatches = [];
+    for (let i = 0; i < participants.length; i += 2) {
+      if (i + 1 < participants.length) {
+        roundMatches.push({
+          id: matchId++,
+          participant: participants[i].name,
+          opponent: participants[i + 1].name,
+          nextMatch: Math.floor(matchId / 2),
+          round: currentRound,
+          result: {} // Empty result initially
+        });
+      }
     }
-  });
+    matches.push(...roundMatches);
+    currentRound++;
+    participants = roundMatches.map(match => ({ name: `Winner of Match ${match.id}` })); // Placeholder for winners
+  }
 
   return { matches };
 }
+
+app.put('/api/tournaments/:tournamentId', async (req, res) => {
+  const { tournamentId } = req.params;
+  const { matches } = req.body;
+
+  try {
+    const tournament = await Tournament.findById(tournamentId);
+    if (!tournament) {
+      return res.status(404).send({ message: 'Tournament not found' });
+    }
+
+    // Update matches
+    tournament.matches = matches;
+    await tournament.save();
+
+    res.status(200).send(tournament); // Ensure updated tournament is sent back
+  } catch (error) {
+    res.status(500).send({ message: 'Error updating tournament', error });
+  }
+});
+
+
+
 
 server.listen(3000, () => {
   console.log('Server running on port 3000');
