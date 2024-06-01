@@ -36,7 +36,7 @@ const participantCounts = {};
 // Generate a random participant
 function generateParticipant() {
   const gender = Math.random() > 0.5 ? 'm' : 'f';
-  let year = 1968 + Math.floor(Math.random() * (2017 - 1968));
+  let year = 1985 + Math.floor(Math.random() * (2017 - 1968));
   let ageCategory = getAgeCategory(year);
 
   while (!ageCategory) {

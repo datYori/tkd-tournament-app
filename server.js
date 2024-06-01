@@ -98,13 +98,18 @@ app.delete('/api/participants/:id', async (req, res) => {
 // POST API to generate a tournament bracket
 app.post('/api/tournaments', async (req, res) => {
   const { weightCategory, ageCategory, gender, kupCategory, combatZone } = req.body;
+  console.log('Received request to create tournament:', req.body);
   try {
-    const participants = await Participant.find({ weightCategory, ageCategory, gender, kupCategory }).lean();
-    if (participants.length < 2) {
-      return res.status(400).send({ message: 'Not enough participants for a tournament' });
+    if (!combatZone) {
+      throw new Error('Combat Zone is required');
     }
-    const shuffledParticipants = shuffleParticipants(participants);
-    const tournamentTree = createTournamentTree(shuffledParticipants, weightCategory, ageCategory, gender, kupCategory, combatZone);
+
+    const participants = await Participant.find({ weightCategory, ageCategory, gender, kupCategory }).lean();
+    console.log('Participants found:', participants);
+
+    const tournamentTree = createTournamentTree(participants, weightCategory, ageCategory, gender, kupCategory, combatZone);
+    console.log('Tournament tree created:', tournamentTree);
+
     const initialMatch = tournamentTree.matches.find(match => !match.result.winner);
     const newTournament = new Tournament({
       weightCategory,
@@ -116,13 +121,15 @@ app.post('/api/tournaments', async (req, res) => {
       currentState: {
         previousMatches: [],
         nextMatchId: initialMatch ? initialMatch.id : null,
-        status: 'Ongoing'
+        status: initialMatch ? 'Ongoing' : 'Completed'
       }
     });
     await newTournament.save();
+    console.log('New tournament saved:', newTournament);
     res.status(201).send(newTournament);
   } catch (error) {
-    res.status(500).send({ message: 'Error generating bracket', error: error });
+    console.error('Error generating bracket:', error.message);
+    res.status(500).send({ message: 'Error generating bracket', error: error.message });
   }
 });
 
@@ -191,29 +198,52 @@ function shuffleParticipants(participants) {
   return participants;
 }
 
+// Function to create the tournament tree
 function createTournamentTree(participants, weightCategory, ageCategory, gender, kupCategory, combatZone) {
+  if (participants.length < 2) {
+    const matches = [{
+      id: combatZone * 1000 + 1,
+      participant: participants[0] ? participants[0].name : 'BYE',
+      opponent: 'BYE',
+      nextMatch: null,
+      round: 1,
+      result: {
+        winner: participants[0] ? participants[0].name : 'BYE'
+      }
+    }];
+    return { matches };
+  }
+
   const rounds = Math.ceil(Math.log2(participants.length));
+  const totalMatches = 2 ** rounds - 1;
+  const totalParticipants = 2 ** rounds;
+
+  let paddedParticipants = [...participants];  // Change to let for reassignment
+  while (paddedParticipants.length < totalParticipants) {
+    paddedParticipants.push({ name: 'BYE' });
+  }
+
   const matches = [];
   let matchId = combatZone * 1000 + 1;
   let currentRound = 1;
 
-  while (participants.length > 1) {
+  while (paddedParticipants.length > 1) {
     const roundMatches = [];
-    for (let i = 0; i < participants.length; i += 2) {
-      if (i + 1 < participants.length) {
+    for (let i = 0; i < paddedParticipants.length; i += 2) {
+      if (i + 1 < paddedParticipants.length) {
         roundMatches.push({
           id: matchId++,
-          participant: participants[i].name,
-          opponent: participants[i + 1].name,
+          participant: paddedParticipants[i].name,
+          opponent: paddedParticipants[i + 1].name,
           nextMatch: Math.floor(matchId / 2),
           round: currentRound,
-          result: {} // Empty result initially
+          result: {}
         });
       }
     }
     matches.push(...roundMatches);
     currentRound++;
-    participants = roundMatches.map(match => ({ name: `Winner of Match ${match.id}` })); // Placeholder for winners
+    paddedParticipants = roundMatches.map(match => ({ name: `Winner of Match ${match.id}` }));
   }
 
   return { matches };
