@@ -190,6 +190,25 @@ app.get('/api/tournaments', async (req, res) => {
   }
 });
 
+// DELETE API to delete tournament
+app.delete('/api/tournaments/:id', async (req, res) => {
+  const { id } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).send({ message: 'Invalid tournament ID' });
+  }
+  try {
+    const result = await Tournament.findByIdAndDelete(id);
+    if (!result) {
+      return res.status(404).send({ message: 'Tournament not found' });
+    }
+    res.status(200).send({ message: 'Tournament deleted successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ message: error.message });
+  }
+});
+
+
 function shuffleParticipants(participants) {
   for (let i = participants.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
