@@ -54,7 +54,8 @@ const TournamentSchema = new mongoose.Schema({
   kupCategory: String,
   matches: [MatchSchema],
   startDate: { type: Date, default: Date.now },
-  status: { type: String, default: 'Pending' }
+  status: { type: String, default: 'Pending' },
+  combatZone: Number
 });
 const Tournament = mongoose.model('Tournament', TournamentSchema);
 
@@ -91,15 +92,15 @@ app.delete('/api/participants/:id', async (req, res) => {
 
 // POST API to generate a tournament bracket
 app.post('/api/tournaments', async (req, res) => {
-  const { weightCategory, ageCategory, gender, kupCategory } = req.body;
+  const { weightCategory, ageCategory, gender, kupCategory, combatZone } = req.body;
   try {
     const participants = await Participant.find({ weightCategory, ageCategory, gender, kupCategory }).lean();
     if (participants.length < 2) {
       return res.status(400).send({ message: 'Not enough participants for a tournament' });
     }
     const shuffledParticipants = shuffleParticipants(participants);
-    const tournamentTree = createTournamentTree(shuffledParticipants, weightCategory, ageCategory, gender, kupCategory);
-    const newTournament = new Tournament({ weightCategory, ageCategory, gender, kupCategory, matches: tournamentTree.matches });
+    const tournamentTree = createTournamentTree(shuffledParticipants, weightCategory, ageCategory, gender, kupCategory, combatZone);
+    const newTournament = new Tournament({ weightCategory, ageCategory, gender, kupCategory, matches: tournamentTree.matches, combatZone });
     await newTournament.save();
     res.status(201).send(newTournament);
   } catch (error) {
@@ -120,6 +121,16 @@ app.get('/api/tournaments/:id', async (req, res) => {
   }
 });
 
+// GET API to list all tournaments
+app.get('/api/tournaments', async (req, res) => {
+  try {
+    const tournaments = await Tournament.find();
+    res.status(200).send(tournaments);
+  } catch (error) {
+    res.status(500).send({ message: 'Error fetching tournaments', error: error });
+  }
+});
+
 function shuffleParticipants(participants) {
   for (let i = participants.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -128,10 +139,10 @@ function shuffleParticipants(participants) {
   return participants;
 }
 
-function createTournamentTree(participants, weightCategory, ageCategory, gender, kupCategory) {
+function createTournamentTree(participants, weightCategory, ageCategory, gender, kupCategory, combatZone) {
   const rounds = Math.ceil(Math.log2(participants.length));
   const matches = [];
-  let matchId = 1;
+  let matchId = combatZone * 1000 + 1;
   let currentRound = 1;
 
   while (participants.length > 1) {
@@ -195,8 +206,6 @@ app.put('/api/participants/:id', async (req, res) => {
     res.status(500).send({ message: 'Error updating participant', error: error });
   }
 });
-
-
 
 server.listen(3000, () => {
   console.log('Server running on port 3000');
