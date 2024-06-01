@@ -176,6 +176,25 @@ app.put('/api/tournaments/:tournamentId', async (req, res) => {
   }
 });
 
+// API to update a participant
+app.put('/api/participants/:id', async (req, res) => {
+  const { id } = req.params;
+  const { name, weightCategory, ageCategory, kupCategory, gender } = req.body;
+
+  try {
+    const participant = await Participant.findByIdAndUpdate(
+      id,
+      { name, weightCategory, ageCategory, kupCategory, gender },
+      { new: true }
+    );
+    if (!participant) {
+      return res.status(404).send({ message: 'Participant not found' });
+    }
+    res.status(200).send(participant);
+  } catch (error) {
+    res.status(500).send({ message: 'Error updating participant', error: error });
+  }
+});
 
 
 
