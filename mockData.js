@@ -30,6 +30,9 @@ function getAgeCategory(year) {
   return null;
 }
 
+// Track the counts of participants by combination of gender, weightCategory, ageCategory, and kupCategory
+const participantCounts = {};
+
 // Generate a random participant
 function generateParticipant() {
   const gender = Math.random() > 0.5 ? 'm' : 'f';
@@ -37,13 +40,24 @@ function generateParticipant() {
   let ageCategory = getAgeCategory(year);
 
   while (!ageCategory) {
-    year = 1968 + Math.floor(Math.random() * (2017 - 1968));
+    year = 1985 + Math.floor(Math.random() * (2017 - 1968));
     ageCategory = getAgeCategory(year);
   }
 
   const weightOptions = categories[ageCategory].weights[gender];
   const weightCategory = weightOptions[Math.floor(Math.random() * weightOptions.length)];
   const kupCategory = Math.random() > 0.5 ? 'A' : 'B';
+
+  const key = `${gender}-${weightCategory}-${ageCategory}-${kupCategory}`;
+  if (!participantCounts[key]) {
+    participantCounts[key] = 0;
+  }
+
+  if (participantCounts[key] >= 12) {
+    return null; // Skip creating a new participant if the limit is reached
+  }
+
+  participantCounts[key]++;
 
   return {
     name: `Player${Math.floor(Math.random() * 10000)}`,
@@ -54,16 +68,20 @@ function generateParticipant() {
   };
 }
 
-
 // Post the participants to the API
 async function postParticipants(num) {
-  for (let i = 0; i < num; i++) {
+  let createdParticipants = 0;
+
+  while (createdParticipants < num) {
     const participant = generateParticipant();
-    try {
-      const response = await axios.post('http://localhost:3000/api/participants', participant);
-      console.log(`Participant created: ID ${response.data._id}`);
-    } catch (error) {
-      console.error('Error posting participant', error);
+    if (participant) {
+      try {
+        const response = await axios.post('http://localhost:3000/api/participants', participant);
+        console.log(`Participant created: ID ${response.data._id}`);
+        createdParticipants++;
+      } catch (error) {
+        console.error('Error posting participant', error);
+      }
     }
   }
 }
