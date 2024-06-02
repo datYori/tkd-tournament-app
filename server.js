@@ -1,4 +1,3 @@
-// Add the necessary import
 const express = require('express');
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
@@ -8,9 +7,8 @@ const cors = require('cors');
 
 const app = express();
 
-// CORS options
 const corsOptions = {
-  origin: '*', // Allow any domain
+  origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type']
 };
@@ -43,7 +41,7 @@ const MatchSchema = new mongoose.Schema({
   opponent: String,
   nextMatch: Number,
   result: {
-    winner: String  // Store the winner's name.
+    winner: String
   },
   round: Number
 });
@@ -60,15 +58,13 @@ const TournamentSchema = new mongoose.Schema({
   currentState: {
     previousMatches: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Match' }],
     nextMatchId: Number,
-    status: String, // 'Pending', 'Ongoing', 'Completed'
+    status: String,
   },
-  currentRound: { type: Number, default: 1 }  // Add this field
+  currentRound: { type: Number, default: 1 }
 });
-
 
 const Tournament = mongoose.model('Tournament', TournamentSchema);
 
-// API to get all participants
 app.get('/api/participants', async (req, res) => {
   try {
     const participants = await Participant.find();
@@ -78,14 +74,12 @@ app.get('/api/participants', async (req, res) => {
   }
 });
 
-// API to add a new participant
 app.post('/api/participants', async (req, res) => {
   const participant = new Participant(req.body);
   await participant.save();
   res.status(201).send(participant);
 });
 
-// API to add multiple participants
 app.post('/api/participants/bulk', async (req, res) => {
   try {
     const participants = await Participant.insertMany(req.body);
@@ -95,7 +89,6 @@ app.post('/api/participants/bulk', async (req, res) => {
   }
 });
 
-// API to delete a participant
 app.delete('/api/participants/:id', async (req, res) => {
   try {
     const result = await Participant.findByIdAndDelete(req.params.id);
@@ -109,22 +102,17 @@ app.delete('/api/participants/:id', async (req, res) => {
   }
 });
 
-// POST API to generate a tournament bracket
 app.post('/api/tournaments', async (req, res) => {
   const { weightCategory, ageCategory, gender, kupCategory, combatZone } = req.body;
-  console.log('Received request to create tournament:', req.body);
   try {
     if (!combatZone) {
       throw new Error('Combat Zone is required');
     }
 
     const participants = await Participant.find({ weightCategory, ageCategory, gender, kupCategory }).lean();
-    console.log('Participants found:', participants);
-
     const tournamentTree = createTournamentTree(participants, weightCategory, ageCategory, gender, kupCategory, combatZone);
-    console.log('Tournament tree created:', tournamentTree);
-
     const initialMatch = tournamentTree.matches.find(match => !match.result.winner);
+
     const newTournament = new Tournament({
       weightCategory,
       ageCategory,
@@ -139,15 +127,12 @@ app.post('/api/tournaments', async (req, res) => {
       }
     });
     await newTournament.save();
-    console.log('New tournament saved:', newTournament);
     res.status(201).send(newTournament);
   } catch (error) {
-    console.error('Error generating bracket:', error.message);
     res.status(500).send({ message: 'Error generating bracket', error: error.message });
   }
 });
 
-// GET API to retrieve tournament state
 app.get('/api/tournaments/:id', async (req, res) => {
   try {
     const tournament = await Tournament.findById(req.params.id).populate('matches');
@@ -160,30 +145,34 @@ app.get('/api/tournaments/:id', async (req, res) => {
   }
 });
 
-// PUT API to update match result and tournament state
+io.on('connection', (socket) => {
+  console.log('New client connected');
+  socket.on('disconnect', () => {
+    console.log('Client disconnected');
+  });
+});
+
+const notifyTournamentUpdate = (tournamentId) => {
+  io.emit('tournamentUpdate', { tournamentId });
+};
+
 app.put('/api/tournaments/:tournamentId/matches/:matchId', async (req, res) => {
   const { tournamentId, matchId } = req.params;
   const { winner } = req.body;
 
-  console.log(`Updating match ${matchId} in tournament ${tournamentId} with winner ${winner}`);
-
   try {
     const tournament = await Tournament.findById(tournamentId);
     if (!tournament) {
-      console.error('Tournament not found');
       return res.status(404).send({ message: 'Tournament not found' });
     }
 
     const match = tournament.matches.find(m => m.id === parseInt(matchId));
     if (!match) {
-      console.error('Match not found');
       return res.status(404).send({ message: 'Match not found' });
     }
 
-    // Update match result
     match.result.winner = winner;
 
-    // Propagate winners and update next match
     const nextMatch = tournament.matches.find(m => m.id === match.nextMatch);
     if (nextMatch) {
       if (nextMatch.participant === match.participant) {
@@ -193,13 +182,11 @@ app.put('/api/tournaments/:tournamentId/matches/:matchId', async (req, res) => {
       }
     }
 
-    // Update current round
     const remainingMatches = tournament.matches.filter(m => m.round === tournament.currentRound && !m.result.winner);
     if (remainingMatches.length === 0) {
       tournament.currentRound += 1;
     }
 
-    // Update tournament status
     const nextMatchId = tournament.currentState.nextMatchId + 1;
     tournament.currentState.previousMatches.push(match._id);
     const upcomingMatch = tournament.matches.find(m => m.id === nextMatchId);
@@ -207,18 +194,13 @@ app.put('/api/tournaments/:tournamentId/matches/:matchId', async (req, res) => {
     tournament.currentState.status = upcomingMatch ? 'Ongoing' : 'Completed';
 
     await tournament.save();
-
-    console.log('Tournament updated successfully');
-    res.status(200).send(tournament); // Ensure updated tournament is sent back
+    notifyTournamentUpdate(tournamentId);
+    res.status(200).send(tournament);
   } catch (error) {
-    console.error('Error updating match result:', error);
     res.status(500).send({ message: 'Error updating match result', error });
   }
 });
 
-
-
-// GET API to list all tournaments
 app.get('/api/tournaments', async (req, res) => {
   try {
     const tournaments = await Tournament.find();
@@ -228,7 +210,6 @@ app.get('/api/tournaments', async (req, res) => {
   }
 });
 
-// DELETE API to delete tournament
 app.delete('/api/tournaments/:id', async (req, res) => {
   const { id } = req.params;
   if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -254,7 +235,6 @@ function shuffleParticipants(participants) {
   return participants;
 }
 
-// Function to create the tournament tree
 function createTournamentTree(participants, weightCategory, ageCategory, gender, kupCategory, combatZone) {
   if (participants.length < 2) {
     const matches = [{
@@ -274,7 +254,7 @@ function createTournamentTree(participants, weightCategory, ageCategory, gender,
   const totalMatches = 2 ** rounds - 1;
   const totalParticipants = 2 ** rounds;
 
-  let paddedParticipants = [...participants];  // Change to let for reassignment
+  let paddedParticipants = [...participants];
   while (paddedParticipants.length < totalParticipants) {
     paddedParticipants.push({ name: 'BYE' });
   }
@@ -315,17 +295,15 @@ app.put('/api/tournaments/:tournamentId', async (req, res) => {
       return res.status(404).send({ message: 'Tournament not found' });
     }
 
-    // Update matches
     tournament.matches = matches;
     await tournament.save();
 
-    res.status(200).send(tournament); // Ensure updated tournament is sent back
+    res.status(200).send(tournament);
   } catch (error) {
     res.status(500).send({ message: 'Error updating tournament', error });
   }
 });
 
-// API to update a participant
 app.put('/api/participants/:id', async (req, res) => {
   const { id } = req.params;
   const { name, weightCategory, ageCategory, kupCategory, gender } = req.body;
