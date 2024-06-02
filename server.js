@@ -1,3 +1,4 @@
+// Add the necessary import
 const express = require('express');
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
@@ -79,6 +80,16 @@ app.post('/api/participants', async (req, res) => {
   const participant = new Participant(req.body);
   await participant.save();
   res.status(201).send(participant);
+});
+
+// API to add multiple participants
+app.post('/api/participants/bulk', async (req, res) => {
+  try {
+    const participants = await Participant.insertMany(req.body);
+    res.status(201).send(participants);
+  } catch (error) {
+    res.status(500).send({ message: 'Error adding participants', error: error });
+  }
 });
 
 // API to delete a participant
@@ -207,7 +218,6 @@ app.delete('/api/tournaments/:id', async (req, res) => {
     res.status(500).send({ message: error.message });
   }
 });
-
 
 function shuffleParticipants(participants) {
   for (let i = participants.length - 1; i > 0; i--) {
