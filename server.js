@@ -60,9 +60,12 @@ const TournamentSchema = new mongoose.Schema({
   currentState: {
     previousMatches: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Match' }],
     nextMatchId: Number,
-    status: String // 'Pending', 'Ongoing', 'Completed'
-  }
+    status: String, // 'Pending', 'Ongoing', 'Completed'
+  },
+  currentRound: { type: Number, default: 1 }  // Add this field
 });
+
+
 const Tournament = mongoose.model('Tournament', TournamentSchema);
 
 // API to get all participants
@@ -162,34 +165,58 @@ app.put('/api/tournaments/:tournamentId/matches/:matchId', async (req, res) => {
   const { tournamentId, matchId } = req.params;
   const { winner } = req.body;
 
+  console.log(`Updating match ${matchId} in tournament ${tournamentId} with winner ${winner}`);
+
   try {
     const tournament = await Tournament.findById(tournamentId);
     if (!tournament) {
+      console.error('Tournament not found');
       return res.status(404).send({ message: 'Tournament not found' });
     }
 
-    const match = tournament.matches.id(matchId);
+    const match = tournament.matches.find(m => m.id === parseInt(matchId));
     if (!match) {
+      console.error('Match not found');
       return res.status(404).send({ message: 'Match not found' });
     }
 
     // Update match result
     match.result.winner = winner;
 
-    // Update tournament state
+    // Propagate winners and update next match
+    const nextMatch = tournament.matches.find(m => m.id === match.nextMatch);
+    if (nextMatch) {
+      if (nextMatch.participant === match.participant) {
+        nextMatch.participant = winner;
+      } else if (nextMatch.opponent === match.opponent) {
+        nextMatch.opponent = winner;
+      }
+    }
+
+    // Update current round
+    const remainingMatches = tournament.matches.filter(m => m.round === tournament.currentRound && !m.result.winner);
+    if (remainingMatches.length === 0) {
+      tournament.currentRound += 1;
+    }
+
+    // Update tournament status
     const nextMatchId = tournament.currentState.nextMatchId + 1;
     tournament.currentState.previousMatches.push(match._id);
-    const nextMatch = tournament.matches.find(m => m.id === nextMatchId);
-    tournament.currentState.nextMatchId = nextMatch ? nextMatch.id : null;
-    tournament.currentState.status = nextMatch ? 'Ongoing' : 'Completed';
+    const upcomingMatch = tournament.matches.find(m => m.id === nextMatchId);
+    tournament.currentState.nextMatchId = upcomingMatch ? upcomingMatch.id : null;
+    tournament.currentState.status = upcomingMatch ? 'Ongoing' : 'Completed';
 
     await tournament.save();
 
+    console.log('Tournament updated successfully');
     res.status(200).send(tournament); // Ensure updated tournament is sent back
   } catch (error) {
+    console.error('Error updating match result:', error);
     res.status(500).send({ message: 'Error updating match result', error });
   }
 });
+
+
 
 // GET API to list all tournaments
 app.get('/api/tournaments', async (req, res) => {
