@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Match = require('./Match');
 
 const TournamentSchema = new mongoose.Schema({
+  _id: String,  // Use a string ID instead of the default ObjectId
   weightCategory: String,
   ageCategory: String,
   gender: String,

@@ -1,6 +1,12 @@
+const mongoose = require('mongoose');
 const Tournament = require('../models/Tournament');
 const Participant = require('../models/Participant');
 const { createTournamentTree } = require('../utils/createTournamentTree');
+
+function generateTournamentId(weightCategory, ageCategory, gender, kupCategory, combatZone) {
+  const formatCategory = (category) => category.replace(/-/g, 'minus').replace(/\+/g, 'plus').replace(/\s+/g, '_');
+  return `${formatCategory(ageCategory)}_${formatCategory(weightCategory)}_${gender}_${kupCategory}_${combatZone}`;
+}
 
 exports.createTournament = async (req, res) => {
   const { weightCategory, ageCategory, gender, kupCategory, combatZone } = req.body;
@@ -14,6 +20,7 @@ exports.createTournament = async (req, res) => {
 
     const initialMatch = tournamentTree.matches.find(match => !match.result.winner);
     const newTournament = new Tournament({
+      _id: generateTournamentId(weightCategory, ageCategory, gender, kupCategory, combatZone),
       weightCategory,
       ageCategory,
       gender,
@@ -88,9 +95,7 @@ exports.listTournaments = async (req, res) => {
 
 exports.deleteTournament = async (req, res) => {
   const { id } = req.params;
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    return res.status(400).send({ message: 'Invalid tournament ID' });
-  }
+  // Remove the mongoose ObjectId validation
   try {
     const result = await Tournament.findByIdAndDelete(id);
     if (!result) {

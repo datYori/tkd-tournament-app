@@ -2,12 +2,12 @@ function createTournamentTree(participants, weightCategory, ageCategory, gender,
   if (participants.length < 2) {
     const matches = [{
       id: combatZone * 1000 + 1,
-      participant: participants[0] ? participants[0].name : 'BYE',
-      opponent: 'BYE',
+      participant: participants[0] ? participants[0].name : 'TBD',
+      opponent: 'TBD',
       nextMatch: null,
       round: 1,
       result: {
-        winner: participants[0] ? participants[0].name : 'BYE'
+        winner: participants[0] ? participants[0].name : 'TBD'
       }
     }];
     return { matches };
@@ -19,7 +19,7 @@ function createTournamentTree(participants, weightCategory, ageCategory, gender,
 
   let paddedParticipants = [...participants];
   while (paddedParticipants.length < totalParticipants) {
-    paddedParticipants.push({ name: 'BYE' });
+    paddedParticipants.push({ name: 'TBD' });
   }
 
   const matches = [];
