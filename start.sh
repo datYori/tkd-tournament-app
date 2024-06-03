@@ -8,4 +8,5 @@ else
   docker start $existing_container
 fi
 
+export MONGODB_URI="mongodb://localhost/tournament"
 node server.js
