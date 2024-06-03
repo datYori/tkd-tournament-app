@@ -10,6 +10,7 @@ const participantRoutes = require('./routes/participants');
 const tournamentRoutes = require('./routes/tournaments');
 
 const app = express();
+const PORT = process.env.PORT || 3000;
 
 const corsOptions = {
   origin: '*',
@@ -31,6 +32,6 @@ const io = socketIo(server, {
 app.use('/api/participants', participantRoutes);
 app.use('/api/tournaments', tournamentRoutes);
 
-server.listen(3000, () => {
-  console.log('Server running on port 3000');
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
