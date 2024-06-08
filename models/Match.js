@@ -1,14 +1,15 @@
 const mongoose = require('mongoose');
 
 const MatchSchema = new mongoose.Schema({
-  id: Number,
-  participant: String,
-  opponent: String,
-  nextMatch: Number,
-  result: {
-    winner: String  // Store the winner's name.
-  },
-  round: Number
+  homeTeamName: String,
+  awayTeamName: String,
+  round: Number,
+  matchNumber: Number,
+  matchComplete: { type: Boolean, default: false },
+  matchAccepted: { type: Boolean, default: false },
+  homeTeamScore: { type: Number, default: 0 },
+  awayTeamScore: { type: Number, default: 0 },
+  dummyMatch: { type: Boolean, default: false },
 });
 
 module.exports = mongoose.model('Match', MatchSchema);

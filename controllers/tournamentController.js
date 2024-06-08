@@ -18,7 +18,9 @@ exports.createTournament = async (req, res) => {
     const participants = await Participant.find({ weightCategory, ageCategory, gender, kupCategory }).lean();
     const tournamentTree = createTournamentTree(participants, weightCategory, ageCategory, gender, kupCategory, combatZone);
 
-    const initialMatch = tournamentTree.matches.find(match => !match.result.winner);
+    // Ensure that we find a match that is not a dummy match
+    const initialMatch = tournamentTree.matches.find(match => !match.dummyMatch);
+
     const newTournament = new Tournament({
       _id: generateTournamentId(weightCategory, ageCategory, gender, kupCategory, combatZone),
       weightCategory,
@@ -29,7 +31,7 @@ exports.createTournament = async (req, res) => {
       combatZone,
       currentState: {
         previousMatches: [],
-        nextMatchId: initialMatch ? initialMatch.id : null,
+        nextMatchId: initialMatch ? initialMatch.matchNumber : null,
         status: initialMatch ? 'Ongoing' : 'Completed'
       }
     });
@@ -46,11 +48,14 @@ exports.getTournamentById = async (req, res) => {
     if (!tournament) {
       return res.status(404).send({ message: 'Tournament not found' });
     }
+
     res.status(200).send(tournament);
   } catch (error) {
     res.status(500).send({ message: 'Error fetching tournament', error });
   }
 };
+
+
 
 exports.updateMatchResult = async (req, res) => {
   const { tournamentId, matchId } = req.params;
@@ -62,20 +67,37 @@ exports.updateMatchResult = async (req, res) => {
       return res.status(404).send({ message: 'Tournament not found' });
     }
 
-    const match = tournament.matches.id(matchId);
+    const match = tournament.matches.find(m => m.id === parseInt(matchId));
     if (!match) {
       return res.status(404).send({ message: 'Match not found' });
     }
 
     // Update match result
     match.result.winner = winner;
+    match.matchComplete = true;
+    match.matchAccepted = true;
+
+    // Update next match participant/opponent
+    const nextMatch = tournament.matches.find(m => m.id === match.nextMatch);
+    if (nextMatch) {
+      if (nextMatch.participant === `Winner of Match ${match.id}`) {
+        nextMatch.participant = winner;
+      } else if (nextMatch.opponent === `Winner of Match ${match.id}`) {
+        nextMatch.opponent = winner;
+      }
+
+      // Update next match details if both participants are decided
+      if (nextMatch.participant !== `Winner of Match ${match.id}` && nextMatch.opponent !== `Winner of Match ${match.id}`) {
+        nextMatch.matchComplete = false;
+        nextMatch.matchAccepted = false;
+      }
+    }
 
     // Update tournament state
-    const nextMatchId = tournament.currentState.nextMatchId + 1;
     tournament.currentState.previousMatches.push(match._id);
-    const nextMatch = tournament.matches.find(m => m.id === nextMatchId);
-    tournament.currentState.nextMatchId = nextMatch ? nextMatch.id : null;
-    tournament.currentState.status = nextMatch ? 'Ongoing' : 'Completed';
+    const ongoingMatch = tournament.matches.find(m => m.participant.startsWith('Winner of') || m.opponent.startsWith('Winner of'));
+    tournament.currentState.nextMatchId = ongoingMatch ? ongoingMatch.id : null;
+    tournament.currentState.status = ongoingMatch ? 'Ongoing' : 'Completed';
 
     await tournament.save();
     res.status(200).send(tournament);

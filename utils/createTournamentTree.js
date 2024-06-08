@@ -1,14 +1,28 @@
-function createTournamentTree(participants, weightCategory, ageCategory, gender, kupCategory, combatZone) {
+// Function to shuffle participants
+function shuffleParticipants(participants) {
+  for (let i = participants.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [participants[i], participants[j]] = [participants[j], participants[i]];
+  }
+  return participants;
+}
+
+// Function to create the tournament tree
+const createTournamentTree = (participants, weightCategory, ageCategory, gender, kupCategory, combatZone) => {
+  // Shuffle participants
+  participants = shuffleParticipants(participants);
+
   if (participants.length < 2) {
     const matches = [{
-      id: combatZone * 1000 + 1,
-      participant: participants[0] ? participants[0].name : 'TBD',
-      opponent: 'TBD',
-      nextMatch: null,
+      homeTeamName: participants[0] ? participants[0].name : 'TBD',
+      awayTeamName: 'TBD',
       round: 1,
-      result: {
-        winner: participants[0] ? participants[0].name : 'TBD'
-      }
+      matchNumber: combatZone * 1000 + 1,
+      matchComplete: false,
+      matchAccepted: false,
+      homeTeamScore: 0,
+      awayTeamScore: 0,
+      dummyMatch: !participants[0] // If there's no participant, it's a dummy match
     }];
     return { matches };
   }
@@ -23,29 +37,33 @@ function createTournamentTree(participants, weightCategory, ageCategory, gender,
   }
 
   const matches = [];
-  let matchId = combatZone * 1000 + 1;
+  let matchNumber = combatZone * 1000 + 1;
   let currentRound = 1;
 
   while (paddedParticipants.length > 1) {
     const roundMatches = [];
     for (let i = 0; i < paddedParticipants.length; i += 2) {
       if (i + 1 < paddedParticipants.length) {
+        const isDummyMatch = paddedParticipants[i].name === 'TBD' || paddedParticipants[i + 1].name === 'TBD';
         roundMatches.push({
-          id: matchId++,
-          participant: paddedParticipants[i].name,
-          opponent: paddedParticipants[i + 1].name,
-          nextMatch: Math.floor(matchId / 2),
+          homeTeamName: paddedParticipants[i].name,
+          awayTeamName: paddedParticipants[i + 1].name,
           round: currentRound,
-          result: {}
+          matchNumber: matchNumber++,
+          matchComplete: false,
+          matchAccepted: false,
+          homeTeamScore: 0,
+          awayTeamScore: 0,
+          dummyMatch: isDummyMatch // Mark if it's a dummy match
         });
       }
     }
     matches.push(...roundMatches);
     currentRound++;
-    paddedParticipants = roundMatches.map(match => ({ name: `Winner of Match ${match.id}` }));
+    paddedParticipants = roundMatches.map(match => ({ name: `Winner of Match ${match.matchNumber}` }));
   }
 
   return { matches };
-}
+};
 
-module.exports = { createTournamentTree };
+module.exports = { createTournamentTree, shuffleParticipants };
