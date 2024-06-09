@@ -54,7 +54,7 @@ const createTournamentTree = (participants, weightCategory, ageCategory, gender,
           matchAccepted: false,
           homeTeamScore: 0,
           awayTeamScore: 0,
-          dummyMatch: isDummyMatch // Mark if it's a dummy match
+          dummyMatch: isDummyMatch
         });
       }
     }
