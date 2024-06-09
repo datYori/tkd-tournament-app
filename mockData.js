@@ -33,6 +33,15 @@ function getAgeCategory(year) {
 // Track the counts of participants by combination of gender, weightCategory, ageCategory, and kupCategory
 const participantCounts = {};
 
+// Array of team names
+const teamNames = ['SKT T1', 'Koo Tigers', 'Samsung Galaxy', 'BLG', 'H2K', 'Rox Tigers'];
+
+// Function to generate a random team name
+function getRandomTeam() {
+  const randomIndex = Math.floor(Math.random() * teamNames.length);
+  return teamNames[randomIndex];
+}
+
 // Generate a random participant
 function generateParticipant() {
   const gender = Math.random() > 0.5 ? 'm' : 'f';
@@ -47,6 +56,7 @@ function generateParticipant() {
   const weightOptions = categories[ageCategory].weights[gender];
   const weightCategory = weightOptions[Math.floor(Math.random() * weightOptions.length)];
   const kupCategory = Math.random() > 0.5 ? 'A' : 'B';
+  const team = getRandomTeam(); // Assign a random team name
 
   const key = `${gender}-${weightCategory}-${ageCategory}-${kupCategory}`;
   if (!participantCounts[key]) {
@@ -64,7 +74,8 @@ function generateParticipant() {
     gender: gender,
     weightCategory: weightCategory,
     ageCategory: ageCategory,
-    kupCategory: kupCategory
+    kupCategory: kupCategory,
+    team: team // Include the team field
   };
 }
 

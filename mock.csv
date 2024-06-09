@@ -1,6 +1,6 @@
-Name,Age Category,Weight Category,Gender,Kup Category
-John Doe,Senior,+87kg,M,B
-Jane Smith,Junior,-20kg,F,A
-Alice Johnson,Cadette,-30kg,F,B
-Bob Brown,Minims,+41kg,M,A
-Charlie Davis,Benjamins,-22kg,M,B
+Name,Age Category,Weight Category,Gender,Kup Category, Team
+John Doe,Senior,+87kg,M,B, Koo Tigers
+Jane Smith,Junior,-20kg,F,A, SKT T1
+Alice Johnson,Cadette,-30kg,F,B, BLG
+Bob Brown,Minims,+41kg,M,A, SKT T1
+Charlie Davis,Benjamins,-22kg,M,B, Koo Tigers

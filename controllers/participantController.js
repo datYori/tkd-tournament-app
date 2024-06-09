@@ -18,7 +18,7 @@ exports.addParticipant = async (req, res) => {
 exports.addMultipleParticipants = async (req, res) => {
   try {
     const validParticipants = req.body.filter(participant => {
-      return participant.Name && participant["Age Category"] && participant["Weight Category"] && participant.Gender && participant["Kup Category"];
+      return participant.Name && participant["Age Category"] && participant["Weight Category"] && participant.Gender && participant["Kup Category"] && participant.Team;
     });
 
     if (validParticipants.length === 0) {
@@ -31,7 +31,8 @@ exports.addMultipleParticipants = async (req, res) => {
       ageCategory: participant["Age Category"],
       weightCategory: participant["Weight Category"],
       gender: participant.Gender,
-      kupCategory: participant["Kup Category"]
+      kupCategory: participant["Kup Category"],
+      team: participant.Team,
     }));
 
     const participants = await Participant.insertMany(mappedParticipants);
@@ -40,7 +41,6 @@ exports.addMultipleParticipants = async (req, res) => {
     res.status(500).send({ message: 'Error adding participants', error });
   }
 };
-
 
 exports.deleteParticipant = async (req, res) => {
   try {
@@ -56,12 +56,12 @@ exports.deleteParticipant = async (req, res) => {
 
 exports.updateParticipant = async (req, res) => {
   const { id } = req.params;
-  const { name, weightCategory, ageCategory, kupCategory, gender } = req.body;
+  const { name, weightCategory, ageCategory, kupCategory, gender, team } = req.body;
 
   try {
     const participant = await Participant.findByIdAndUpdate(
       id,
-      { name, weightCategory, ageCategory, kupCategory, gender },
+      { name, weightCategory, ageCategory, kupCategory, gender, team },
       { new: true }
     );
     if (!participant) {

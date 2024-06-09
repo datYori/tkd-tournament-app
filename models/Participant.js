@@ -6,6 +6,7 @@ const ParticipantSchema = new mongoose.Schema({
   ageCategory: String,
   kupCategory: String,
   gender: String,
+  team: String,
 });
 
 module.exports = mongoose.model('Participant', ParticipantSchema);
