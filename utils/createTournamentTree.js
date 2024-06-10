@@ -7,9 +7,32 @@ function shuffleParticipants(participants) {
   return participants;
 }
 
-// Function to create the tournament tree
 const createTournamentTree = (participants, weightCategory, ageCategory, gender, kupCategory, combatZone) => {
-  // Shuffle participants
+  const ageGenderCodes = {
+    "Poussins Female": "01",
+    "Poussins Male": "02",
+    "Benjamins Female": "03",
+    "Benjamins Male": "04",
+    "Minimes Female": "05",
+    "Minimes Male": "06",
+    "Cadets Female": "07",
+    "Cadets Male": "08",
+    "Juniors Female": "09",
+    "Juniors Male": "10",
+    "Seniors Female": "11",
+    "Seniors Male": "12"
+  };
+
+  const getCategoryCode = (ageCategory, gender) => {
+    const key = `${ageCategory} ${gender}`;
+    return ageGenderCodes[key] || "00"; // Default to "00" for unknown categories
+  };
+
+  const getNextMatchId = (combatZone, round, ageCategory, gender, sequence) => {
+    const categoryCode = getCategoryCode(ageCategory, gender);
+    return `${combatZone}-${round}-${categoryCode}-${sequence.toString().padStart(3, '0')}`;
+  };
+
   participants = shuffleParticipants(participants);
 
   if (participants.length < 2) {
@@ -17,12 +40,12 @@ const createTournamentTree = (participants, weightCategory, ageCategory, gender,
       homeTeamName: participants[0] ? participants[0].name : 'TBD',
       awayTeamName: 'TBD',
       round: 1,
-      matchNumber: combatZone * 1000 + 1,
+      matchNumber: getNextMatchId(combatZone, 1, ageCategory, gender, 1),
       matchComplete: false,
       matchAccepted: false,
       homeTeamScore: 0,
       awayTeamScore: 0,
-      dummyMatch: !participants[0] // If there's no participant, it's a dummy match
+      dummyMatch: !participants[0]
     }];
     return { matches };
   }
@@ -37,7 +60,7 @@ const createTournamentTree = (participants, weightCategory, ageCategory, gender,
   }
 
   const matches = [];
-  let matchNumber = combatZone * 1000 + 1;
+  let sequence = 1;
   let currentRound = 1;
 
   while (paddedParticipants.length > 1) {
@@ -49,7 +72,7 @@ const createTournamentTree = (participants, weightCategory, ageCategory, gender,
           homeTeamName: paddedParticipants[i].name,
           awayTeamName: paddedParticipants[i + 1].name,
           round: currentRound,
-          matchNumber: matchNumber++,
+          matchNumber: getNextMatchId(combatZone, currentRound, ageCategory, gender, sequence++),
           matchComplete: false,
           matchAccepted: false,
           homeTeamScore: 0,
@@ -67,3 +90,4 @@ const createTournamentTree = (participants, weightCategory, ageCategory, gender,
 };
 
 module.exports = { createTournamentTree, shuffleParticipants };
+
