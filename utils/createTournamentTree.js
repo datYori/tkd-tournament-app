@@ -9,28 +9,28 @@ function shuffleParticipants(participants) {
 
 const createTournamentTree = (participants, weightCategory, ageCategory, gender, kupCategory, combatZone) => {
   const ageGenderCodes = {
-    "Poussins Female": "01",
-    "Poussins Male": "02",
-    "Benjamins Female": "03",
-    "Benjamins Male": "04",
-    "Minimes Female": "05",
-    "Minimes Male": "06",
-    "Cadets Female": "07",
-    "Cadets Male": "08",
-    "Juniors Female": "09",
-    "Juniors Male": "10",
-    "Seniors Female": "11",
-    "Seniors Male": "12"
+    "Poussins Female": 1,
+    "Poussins Male": 2,
+    "Benjamins Female": 3,
+    "Benjamins Male": 4,
+    "Minimes Female": 5,
+    "Minimes Male": 6,
+    "Cadets Female": 7,
+    "Cadets Male": 8,
+    "Juniors Female": 9,
+    "Juniors Male": 10,
+    "Seniors Female": 11,
+    "Seniors Male": 12
   };
 
   const getCategoryCode = (ageCategory, gender) => {
     const key = `${ageCategory} ${gender}`;
-    return ageGenderCodes[key] || "00"; // Default to "00" for unknown categories
+    return ageGenderCodes[key] || 0; // Default to 0 for unknown categories
   };
 
   const getNextMatchId = (combatZone, round, ageCategory, gender, sequence) => {
     const categoryCode = getCategoryCode(ageCategory, gender);
-    return `${combatZone}-${round}-${categoryCode}-${sequence.toString().padStart(3, '0')}`;
+    return categoryCode * 1000000 + combatZone * 100000 + round * 10000 + sequence;
   };
 
   participants = shuffleParticipants(participants);
@@ -90,4 +90,3 @@ const createTournamentTree = (participants, weightCategory, ageCategory, gender,
 };
 
 module.exports = { createTournamentTree, shuffleParticipants };
-
