@@ -2,3 +2,4 @@ deleteParticipants.js
 .env
 *.csv
 !mock.csv
+deleteTournaments.js
