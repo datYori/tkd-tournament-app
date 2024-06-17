@@ -1,1 +1,4 @@
-malley2024.csv
+deleteParticipants.js
+.env
+*.csv
+!mock.csv
