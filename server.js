@@ -31,7 +31,7 @@ app.use((req, res, next) => {
   const origin = req.get('origin');
   const authToken = req.get('X-Auth-Token');
 
-  if ((origin === frontendURL && req.method === 'GET') || authToken === adminAuthToken) {
+  if ((req.method === 'GET') || authToken === adminAuthToken) {
     next();
   } else {
     res.status(403).send('Forbidden');
