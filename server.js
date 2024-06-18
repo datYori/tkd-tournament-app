@@ -28,7 +28,6 @@ app.use(bodyParser.json());
 
 // Middleware to allow only specific requests
 app.use((req, res, next) => {
-  const origin = req.get('origin');
   const authToken = req.get('X-Auth-Token');
 
   if ((req.method === 'GET') || authToken === adminAuthToken) {
