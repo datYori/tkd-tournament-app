@@ -12,6 +12,7 @@ const tournamentRoutes = require('./routes/tournaments');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// CORS configuration
 const corsOptions = {
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
@@ -20,6 +21,20 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.use(bodyParser.json());
+
+app.use((req, res, next) => {
+  const frontendURL = process.env.FRONTEND_HOST;
+  const adminHostIP = process.env.ADMIN_HOST_IP;
+
+  const origin = req.get('origin');
+  const ip = req.ip;
+
+  if ((origin === frontendURL && req.method === 'GET') || ip === adminHostIP) {
+    next();
+  } else {
+    res.status(403).send('Forbidden');
+  }
+});
 
 const server = http.createServer(app);
 const io = socketIo(server, {
