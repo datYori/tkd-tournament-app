@@ -22,14 +22,15 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(bodyParser.json());
 
+// Middleware to allow only specific requests
 app.use((req, res, next) => {
   const frontendURL = process.env.FRONTEND_HOST;
-  const adminHostIP = process.env.ADMIN_HOST_IP;
+  const laptopAuthToken = process.env.AUTH_TOKEN;  // Read the token from environment variables
 
   const origin = req.get('origin');
-  const ip = req.ip;
+  const authToken = req.get('X-Auth-Token');
 
-  if ((origin === frontendURL && req.method === 'GET') || ip === adminHostIP) {
+  if ((origin === frontendURL && req.method === 'GET') || authToken === laptopAuthToken) {
     next();
   } else {
     res.status(403).send('Forbidden');
