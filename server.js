@@ -12,11 +12,15 @@ const tournamentRoutes = require('./routes/tournaments');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Get frontend URL and auth token from environment variables
+const frontendURL = process.env.FRONTEND_URL;
+const adminAuthToken = process.env.AUTH_TOKEN;
+
 // CORS configuration
 const corsOptions = {
-  origin: '*',
+  origin: [frontendURL, 'http://localhost:3000'], // Add frontend URL and local development URL
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type']
+  allowedHeaders: ['Content-Type', 'X-Auth-Token'],
 };
 
 app.use(cors(corsOptions));
@@ -24,13 +28,10 @@ app.use(bodyParser.json());
 
 // Middleware to allow only specific requests
 app.use((req, res, next) => {
-  const frontendURL = process.env.FRONTEND_HOST;
-  const laptopAuthToken = process.env.AUTH_TOKEN;  // Read the token from environment variables
-
   const origin = req.get('origin');
   const authToken = req.get('X-Auth-Token');
 
-  if ((origin === frontendURL && req.method === 'GET') || authToken === laptopAuthToken) {
+  if ((origin === frontendURL && req.method === 'GET') || authToken === adminAuthToken) {
     next();
   } else {
     res.status(403).send('Forbidden');
@@ -40,8 +41,8 @@ app.use((req, res, next) => {
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: "http://localhost:3001",
-    methods: ["GET", "POST", "PUT"]
+    origin: [frontendURL, 'http://localhost:3000'],
+    methods: ["GET", "POST", "PUT"],
   }
 });
 
