@@ -18,7 +18,7 @@ const adminAuthToken = process.env.AUTH_TOKEN;
 
 // CORS configuration
 const corsOptions = {
-  origin: [frontendURL, 'http://localhost:3000'], // Add frontend URL and local development URL
+  origin: '*', // Add frontend URL and local development URL
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'X-Auth-Token'],
 };
