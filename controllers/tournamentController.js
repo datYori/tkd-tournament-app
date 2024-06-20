@@ -18,9 +18,6 @@ exports.createTournament = async (req, res) => {
     const participants = await Participant.find({ weightCategory, ageCategory, gender, kupCategory }).lean();
     const tournamentTree = createTournamentTree(participants, weightCategory, ageCategory, gender, kupCategory, combatZone);
 
-    // Ensure that we find a match that is not a dummy match
-    const initialMatch = tournamentTree.matches.find(match => !match.dummyMatch);
-
     const newTournament = new Tournament({
       _id: generateTournamentId(weightCategory, ageCategory, gender, kupCategory, combatZone),
       weightCategory,
@@ -31,8 +28,8 @@ exports.createTournament = async (req, res) => {
       combatZone,
       currentState: {
         previousMatches: [],
-        nextMatchId: initialMatch ? initialMatch.matchNumber : null,
-        status: initialMatch ? 'Ongoing' : 'Completed'
+        nextMatchId: tournamentTree.matches[0] ? tournamentTree.matches[0].matchNumber : null,
+        status: 'Pending'
       }
     });
     await newTournament.save();
