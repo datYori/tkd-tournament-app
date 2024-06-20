@@ -1,4 +1,4 @@
-const createTournamentTree = (participants, weightCategory, ageCategory, gender, kupCategory, combatZone) => {
+const createTournamentTree = (participants) => {
   const shuffleParticipants = (participants) => {
     for (let i = participants.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -10,21 +10,37 @@ const createTournamentTree = (participants, weightCategory, ageCategory, gender,
   participants = shuffleParticipants(participants);
 
   const matches = [];
+  const rounds = Math.ceil(Math.log2(participants.length));
+  const totalParticipants = 2 ** rounds;
 
-  for (let i = 0; i < participants.length; i += 2) {
-    matches.push({
-      homeTeamName: participants[i] ? participants[i].name : 'TBD',
-      awayTeamName: participants[i + 1] ? participants[i + 1].name : 'TBD',
-      round: 1,
-      matchNumber: (i / 2) + 1,
-      matchComplete: false,
-      homeTeamScore: 0,
-      awayTeamScore: 0,
-      dummyMatch: participants[i] ? !participants[i + 1] : true,
-    });
+  let paddedParticipants = [...participants];
+  while (paddedParticipants.length < totalParticipants) {
+    paddedParticipants.push({ name: '' });
   }
 
-  return { matches };
+  let matchNumber = 1;
+  const roundsData = [];
+
+  for (let round = 1; round <= rounds; round++) {
+    const seeds = [];
+    for (let i = 0; i < paddedParticipants.length; i += 2) {
+      seeds.push({
+        id: matchNumber++,
+        date: new Date().toDateString(),
+        teams: [
+          { name: paddedParticipants[i].name },
+          { name: paddedParticipants[i + 1].name }
+        ],
+      });
+    }
+    roundsData.push({
+      title: `Round ${round}`,
+      seeds: seeds,
+    });
+    paddedParticipants = paddedParticipants.slice(0, paddedParticipants.length / 2).map(() => ({ name: '' }));
+  }
+
+  return roundsData;
 };
 
 module.exports = { createTournamentTree };

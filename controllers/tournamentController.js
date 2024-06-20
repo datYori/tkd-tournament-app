@@ -16,7 +16,7 @@ exports.createTournament = async (req, res) => {
     }
 
     const participants = await Participant.find({ weightCategory, ageCategory, gender, kupCategory }).lean();
-    const tournamentTree = createTournamentTree(participants, weightCategory, ageCategory, gender, kupCategory, combatZone);
+    const rounds = createTournamentTree(participants);
 
     const newTournament = new Tournament({
       _id: generateTournamentId(weightCategory, ageCategory, gender, kupCategory, combatZone),
@@ -24,11 +24,11 @@ exports.createTournament = async (req, res) => {
       ageCategory,
       gender,
       kupCategory,
-      matches: tournamentTree.matches,
+      rounds,
       combatZone,
       currentState: {
         previousMatches: [],
-        nextMatchId: tournamentTree.matches[0] ? tournamentTree.matches[0].matchNumber : null,
+        nextMatchId: rounds[0]?.seeds[0]?.id || null,
         status: 'Pending'
       }
     });
@@ -41,7 +41,7 @@ exports.createTournament = async (req, res) => {
 
 exports.getTournamentById = async (req, res) => {
   try {
-    const tournament = await Tournament.findById(req.params.id).populate('matches');
+    const tournament = await Tournament.findById(req.params.id);
     if (!tournament) {
       return res.status(404).send({ message: 'Tournament not found' });
     }
@@ -51,8 +51,6 @@ exports.getTournamentById = async (req, res) => {
     res.status(500).send({ message: 'Error fetching tournament', error });
   }
 };
-
-
 
 exports.updateMatchResult = async (req, res) => {
   const { tournamentId, matchId } = req.params;
