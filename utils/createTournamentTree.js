@@ -1,4 +1,4 @@
-const createTournamentTree = (participants) => {
+const createTournamentTree = (participants, matchIdSeed) => {
   const shuffleParticipants = (participants) => {
     for (let i = participants.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -9,24 +9,23 @@ const createTournamentTree = (participants) => {
 
   participants = shuffleParticipants(participants);
 
-  const matches = [];
+  const roundsData = [];
   const rounds = Math.ceil(Math.log2(participants.length));
   const totalParticipants = 2 ** rounds;
 
   let paddedParticipants = [...participants];
   while (paddedParticipants.length < totalParticipants) {
-    paddedParticipants.push({ name: '' });
+    paddedParticipants.push({ name: '' }); // Fill with empty strings
   }
 
-  let matchNumber = 1;
-  const roundsData = [];
-
   for (let round = 1; round <= rounds; round++) {
+    let matchNumber = 1;
     const seeds = [];
     for (let i = 0; i < paddedParticipants.length; i += 2) {
+      const matchId = `${matchIdSeed}${round}${String(matchNumber++).padStart(2, '0')}`;
       seeds.push({
-        id: matchNumber++,
-        date: new Date().toDateString(),
+        id: matchId,
+        date: matchId, // Use match ID as the date for simplicity
         teams: [
           { name: paddedParticipants[i].name },
           { name: paddedParticipants[i + 1].name }

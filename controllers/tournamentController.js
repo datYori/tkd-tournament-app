@@ -16,7 +16,7 @@ exports.createTournament = async (req, res) => {
     }
 
     const participants = await Participant.find({ weightCategory, ageCategory, gender, kupCategory }).lean();
-    const rounds = createTournamentTree(participants);
+    const rounds = createTournamentTree(participants, '100000');
 
     const newTournament = new Tournament({
       _id: generateTournamentId(weightCategory, ageCategory, gender, kupCategory, combatZone),
