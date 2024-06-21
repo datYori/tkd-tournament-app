@@ -1,21 +1,33 @@
 const mongoose = require('mongoose');
-const Match = require('./Match');
 
 const TournamentSchema = new mongoose.Schema({
-  _id: String, // Use a string ID instead of the default ObjectId
+  _id: String,
   weightCategory: String,
   ageCategory: String,
   gender: String,
   kupCategory: String,
-  matches: [Match.schema],
-  startDate: { type: Date, default: Date.now },
-  status: { type: String, default: 'Pending' },
-  combatZone: Number,
+  rounds: [
+    {
+      title: String,
+      seeds: [
+        {
+          id: Number,
+          date: String,
+          teams: [
+            { name: String },
+            { name: String },
+          ],
+        },
+      ],
+    },
+  ],
+  combatZone: String,
   currentState: {
-    previousMatches: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Match' }],
+    previousMatches: Array,
     nextMatchId: Number,
-    status: String // 'Pending', 'Ongoing', 'Completed'
-  }
+    status: String,
+  },
+  startDate: { type: Date, default: Date.now },
 });
 
 module.exports = mongoose.model('Tournament', TournamentSchema);

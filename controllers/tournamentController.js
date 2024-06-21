@@ -15,11 +15,61 @@ exports.createTournament = async (req, res) => {
       throw new Error('Combat Zone is required');
     }
 
-    const participants = await Participant.find({ weightCategory, ageCategory, gender, kupCategory }).lean();
-    const tournamentTree = createTournamentTree(participants, weightCategory, ageCategory, gender, kupCategory, combatZone);
+    const ageCategoryOrder = {
+      Poussin: 1,
+      Benjamin: 2,
+      Minime: 3,
+      Cadet: 4,
+      Junior: 5,
+      Senior: 6
+    };
 
-    // Ensure that we find a match that is not a dummy match
-    const initialMatch = tournamentTree.matches.find(match => !match.dummyMatch);
+    function getWeightCategoryCode(weightCategory) {
+      // Map each weight category to a unique two-digit code
+      const weightCategories = {
+        '-21kg': 21,
+        '-22kg': 22,
+        '-24kg': 24,
+        '-28kg': 28,
+        '-29kg': 29,
+        '-30kg': 30,
+        '-32kg': 32,
+        '-35kg': 35,
+        '-38kg': 38,
+        '-41kg': 41,
+        '-45kg': 45,
+        '-49kg': 49,
+        '-55kg': 55,
+        '-59kg': 59,
+        '-61kg': 61,
+        '-63kg': 63,
+        '-74kg': 74
+      };
+      return weightCategories[weightCategory] || 99;
+    }
+
+    function getKupCategoryCode(kupCategory) {
+      const kupCategories = {
+        'B': 1,
+        'A': 2
+      };
+      return kupCategories[kupCategory] || 9;
+    }
+
+    function generateMatchIdSeed(weightCategory, ageCategory, gender, kupCategory, combatZone) {
+      const combatZoneDigit = combatZone.toString().padStart(1, '0');
+      const ageCategoryDigit = (ageCategoryOrder[ageCategory] || 0).toString().padStart(1, '0');
+      const genderDigit = gender === 'FEMME' ? '1' : '2';
+      const weightCategoryCode = getWeightCategoryCode(weightCategory).toString().padStart(2, '0');
+      const kupCategoryCode = getKupCategoryCode(kupCategory).toString().padStart(1, '0');
+
+      return `${combatZoneDigit}${ageCategoryDigit}${genderDigit}${weightCategoryCode}${kupCategoryCode}0`;
+    }
+
+    // Example usage in your createTournament function
+    const matchIdSeed = generateMatchIdSeed(weightCategory, ageCategory, gender, kupCategory, combatZone);
+    const participants = await Participant.find({ weightCategory, ageCategory, gender, kupCategory }).lean();
+    const rounds = createTournamentTree(participants, matchIdSeed);
 
     const newTournament = new Tournament({
       _id: generateTournamentId(weightCategory, ageCategory, gender, kupCategory, combatZone),
@@ -27,12 +77,12 @@ exports.createTournament = async (req, res) => {
       ageCategory,
       gender,
       kupCategory,
-      matches: tournamentTree.matches,
+      rounds,
       combatZone,
       currentState: {
         previousMatches: [],
-        nextMatchId: initialMatch ? initialMatch.matchNumber : null,
-        status: initialMatch ? 'Ongoing' : 'Completed'
+        nextMatchId: rounds[0]?.seeds[0]?.id || null,
+        status: 'Pending'
       }
     });
     await newTournament.save();
@@ -44,7 +94,7 @@ exports.createTournament = async (req, res) => {
 
 exports.getTournamentById = async (req, res) => {
   try {
-    const tournament = await Tournament.findById(req.params.id).populate('matches');
+    const tournament = await Tournament.findById(req.params.id);
     if (!tournament) {
       return res.status(404).send({ message: 'Tournament not found' });
     }
@@ -54,8 +104,6 @@ exports.getTournamentById = async (req, res) => {
     res.status(500).send({ message: 'Error fetching tournament', error });
   }
 };
-
-
 
 exports.updateMatchResult = async (req, res) => {
   const { tournamentId, matchId } = req.params;
