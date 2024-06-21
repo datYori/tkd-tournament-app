@@ -25,7 +25,7 @@ const createTournamentTree = (participants, matchIdSeed) => {
       const matchId = `${matchIdSeed}${round}${String(matchNumber++).padStart(2, '0')}`;
       seeds.push({
         id: matchId,
-        date: matchId, // Use match ID as the date for simplicity
+        date: ' ',
         teams: [
           { name: paddedParticipants[i].name },
           { name: paddedParticipants[i + 1].name }
